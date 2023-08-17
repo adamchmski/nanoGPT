@@ -43,6 +43,21 @@ def get_batch(split, batch_size, block_size):
     y = torch.stack([data[i+1:i+block_size+1] for i in ix])
     return x, y 
 
+@torch.no_grad()
+def estimate_loss(model):
+    out = {}
+    model.eval()
+    for split in ['train', 'test']:
+        losses = torch.zeros(eval_iters)
+        for k in range(eval_iters):
+            X, Y = get_batch(split, batch_size, block_size)
+            logits, loss = model.forward(X, Y)
+            losses[k] = loss.item()
+        out[split] = losses.mean()
+    model.train()
+    return out
+
+
 # Bigram model class 
 class BigramLanguageModel(nn.Module):
     def __init__(self, vocab_size):
@@ -74,7 +89,7 @@ class BigramLanguageModel(nn.Module):
 
 # Create the BigramLanguageModel and optimizer
 model = BigramLanguageModel(vocab_size)
-optimizer = torch.optim.AdamW(model.parameters(), learning_rate=learning_rate)
+optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 # Train model 
 for step in range(training_iters):
@@ -86,8 +101,9 @@ for step in range(training_iters):
 
     # Forward Pass 
     logits, loss = model.forward(x, y)
-    if (step % 1000) == 0:
-        print(f"At step {step} loss = {loss.item()}")
+    if (step % eval_interval) == 0:
+        out = estimate_loss(model)
+        print(f"At step {step} train loss = {out['train']}, test loss = {out['test']}")
 
     # Backward Pass 
     loss.backward() 
