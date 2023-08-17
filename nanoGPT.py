@@ -9,7 +9,7 @@ training_iters = 10000
 num_generated_tokens = 500
 eval_interval = 300 
 learning_rate = 1e-2
-#device=Metal FIGURE OUT HOW TO RUN ON M1 GPU @ 39:10 of video 
+device = 'cpu '#'mps' if torch.has_mps else 'cpu'
 eval_iters = 200 
 
 
@@ -41,7 +41,7 @@ def get_batch(split, batch_size, block_size):
     ix = torch.randint(len(data) - block_size, (batch_size, ))
     x = torch.stack([data[i:i+block_size] for i in ix])
     y = torch.stack([data[i+1:i+block_size+1] for i in ix])
-    return x, y 
+    return x.to(device), y.to(device) 
 
 @torch.no_grad()
 def estimate_loss(model):
@@ -89,6 +89,7 @@ class BigramLanguageModel(nn.Module):
 
 # Create the BigramLanguageModel and optimizer
 model = BigramLanguageModel(vocab_size)
+model.to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 # Train model 
@@ -112,7 +113,7 @@ for step in range(training_iters):
 
 # Generate text from the model
 print(f"Generating {num_generated_tokens} tokens of text...\n")
-start_idx = torch.zeros((1,1), dtype=torch.long)
+start_idx = torch.zeros((1,1), dtype=torch.long, device=device)
 generation = model.generate(idx=start_idx, max_new_tokens=num_generated_tokens)[0]
 decoded_generation = decode(generation.tolist())
 print(decoded_generation)
