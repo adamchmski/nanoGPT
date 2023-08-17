@@ -9,7 +9,7 @@ training_iters = 10000
 num_generated_tokens = 500
 eval_interval = 300 
 learning_rate = 1e-2
-device = 'cpu '#'mps' if torch.has_mps else 'cpu'
+device = 'cpu' #'mps' if torch.has_mps else 'cpu'
 eval_iters = 200 
 
 
