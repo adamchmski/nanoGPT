@@ -5,10 +5,11 @@ from torch.nn import functional as F
 # Hyperparameters 
 batch_size = 32
 block_size = 8
-max_iters = 3000
+training_iters = 10000
+num_generated_tokens = 500
 eval_interval = 300 
 learning_rate = 1e-2
-#device=Metal FIGURE OUT HOW TO RUN ON M1 GPU 
+#device=Metal FIGURE OUT HOW TO RUN ON M1 GPU @ 39:10 of video 
 eval_iters = 200 
 
 
@@ -73,10 +74,10 @@ class BigramLanguageModel(nn.Module):
 
 # Create the BigramLanguageModel and optimizer
 model = BigramLanguageModel(vocab_size)
-optimizer = torch.optim.AdamW(model.parameters())
+optimizer = torch.optim.AdamW(model.parameters(), learning_rate=learning_rate)
 
 # Train model 
-for step in range(10000):
+for step in range(training_iters):
     # Get a batch to train on
     x, y = get_batch('train', batch_size, block_size)
     
@@ -94,8 +95,8 @@ for step in range(10000):
     
 
 # Generate text from the model
-print("Generating text...\n")
+print(f"Generating {num_generated_tokens} tokens of text...\n")
 start_idx = torch.zeros((1,1), dtype=torch.long)
-generation = model.generate(idx=start_idx, max_new_tokens=500)[0]
+generation = model.generate(idx=start_idx, max_new_tokens=num_generated_tokens)[0]
 decoded_generation = decode(generation.tolist())
 print(decoded_generation)
