@@ -202,3 +202,15 @@ start_idx = torch.zeros((1,1), dtype=torch.long, device=device)
 generation = model.generate(idx=start_idx, max_new_tokens=num_generated_tokens)[0]
 decoded_generation = decode(generation.tolist())
 print(decoded_generation)
+
+
+"""
+# Load a saved model 
+model = BigramLanguageModel(vocab_size)
+model.load_state_dict(torch.load('loss_1_7.pt'))
+model.eval()
+start_idx = torch.zeros((1,1), dtype=torch.long, device=device)
+generation = model.generate(idx=start_idx, max_new_tokens=1000)[0]
+decoded_generation = decode(generation.tolist())
+print(decoded_generation)
+"""
