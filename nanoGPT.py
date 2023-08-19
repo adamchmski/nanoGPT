@@ -5,14 +5,14 @@ from tqdm import tqdm
 
 # Hyperparameters 
 batch_size = 32
-block_size = 16
+block_size = 64
 training_iters = 5000
-num_generated_tokens = 500
-eval_interval = 1000 
-learning_rate = 1e-3
+num_generated_tokens = 1000
+eval_interval = 750 
+learning_rate = 7e-4
 device = 'cpu' #'mps' if torch.backends.mps.is_built() else 'cpu'
 eval_iters = 200
-n_embed = 32
+n_embed = 128
 n_head = 4
 n_layer = 4
 dropout = 0.2
