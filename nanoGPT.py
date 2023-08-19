@@ -8,12 +8,12 @@ batch_size = 32
 block_size = 64
 training_iters = 5000
 num_generated_tokens = 1000
-eval_interval = 750 
-learning_rate = 7e-4
+eval_interval = 750
+learning_rate = 3e-4
 device = 'cpu' #'mps' if torch.backends.mps.is_built() else 'cpu'
 eval_iters = 200
-n_embed = 128
-n_head = 4
+n_embed = 204
+n_head = 6
 n_layer = 4
 dropout = 0.2
 
@@ -174,6 +174,7 @@ class BigramLanguageModel(nn.Module):
 
 # Create the BigramLanguageModel and optimizer
 model = BigramLanguageModel(vocab_size)
+#model.load_state_dict(torch.load('./saved models/newModel.pt'))
 model.to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
@@ -203,7 +204,7 @@ generation = model.generate(idx=start_idx, max_new_tokens=num_generated_tokens)[
 decoded_generation = decode(generation.tolist())
 print(decoded_generation)
 
-
+#torch.save(model.state_dict(), 'newModel.pt')
 """
 # Load a saved model 
 model = BigramLanguageModel(vocab_size)
