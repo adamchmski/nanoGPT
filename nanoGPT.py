@@ -1,17 +1,21 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+from tqdm import tqdm
 
 # Hyperparameters 
 batch_size = 32
-block_size = 8
+block_size = 16
 training_iters = 5000
 num_generated_tokens = 500
-eval_interval = 300 
+eval_interval = 1000 
 learning_rate = 1e-3
-device = 'cpu' #'mps' if torch.has_mps else 'cpu'
-eval_iters = 200 
+device = 'cpu' #'mps' if torch.backends.mps.is_built() else 'cpu'
+eval_iters = 200
 n_embed = 32
+n_head = 4
+n_layer = 4
+dropout = 0.2
 
 
 # Import text data 
@@ -67,6 +71,7 @@ class Head(nn.Module):
         self.query = nn.Linear(n_embed, head_size, bias=False)
         self.value = nn.Linear(n_embed, head_size, bias=False)
         self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size)))
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         B,T,C = x.shape
@@ -76,6 +81,7 @@ class Head(nn.Module):
         wei = q @ k.transpose(-2, -1) * C**-0.5
         wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
         wei = F.softmax(wei, dim=-1)
+        wei = self.dropout(wei)
 
         v = self.value(x)
         out = wei @ v
@@ -88,10 +94,11 @@ class MultiHeadAttention(nn.Module):
         super().__init__()
         self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
         self.proj = nn.Linear(n_embed, n_embed)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         out = torch.cat([h(x) for h in self.heads], dim=-1)
-        out = self.proj(out)
+        out = self.dropout(self.proj(out))
         return out
 
 # Linear then non-linear layer 
@@ -102,7 +109,8 @@ class FeedForward(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(n_embed, 4 * n_embed),
             nn.ReLU(),
-            nn.Linear(4 * n_embed, n_embed)
+            nn.Linear(4 * n_embed, n_embed),
+            nn.Dropout(dropout)
         )
     
     def forward(self, x):
@@ -129,12 +137,8 @@ class BigramLanguageModel(nn.Module):
         super().__init__()
         self.token_embedding_table = nn.Embedding(vocab_size, n_embed)
         self.position_embedding_table = nn.Embedding(block_size, n_embed)
-        self.blocks = nn.Sequential(
-            Block(n_embed, n_head=4),
-            Block(n_embed, n_head=4),
-            Block(n_embed, n_head=4),
-            nn.LayerNorm(n_embed)
-        )
+        self.blocks = nn.Sequential(*[Block(n_embed, n_head) for _ in range(n_layer)])
+        self.ln_f = nn.LayerNorm(n_embed)
         self.lm_head = nn.Linear(n_embed, vocab_size)
         
     def forward(self, inputs, targets=None):
@@ -144,8 +148,8 @@ class BigramLanguageModel(nn.Module):
         pos_embd = self.position_embedding_table(torch.arange(T, device=device))
         x = token_embd + pos_embd
         x = self.blocks(x)
+        x = self.ln_f(x)
         logits = self.lm_head(x)
-
 
         if targets == None:
             loss = None
@@ -174,7 +178,7 @@ model.to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 # Train model 
-for step in range(training_iters):
+for step in tqdm(range(training_iters)):
     # Get a batch to train on
     x, y = get_batch('train', batch_size, block_size)
     
@@ -185,7 +189,7 @@ for step in range(training_iters):
     logits, loss = model.forward(x, y)
     if (step % eval_interval) == 0:
         out = estimate_loss(model)
-        print(f"At step {step} train loss = {out['train']}, test loss = {out['test']}")
+        tqdm.write(f"At step {step} train loss = {out['train']}, test loss = {out['test']}")
 
     # Backward Pass 
     loss.backward() 
